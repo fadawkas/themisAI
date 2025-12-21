@@ -1,0 +1,35 @@
+# env & secrets
+.env
+secrets_*.py
+*.key
+*.pem
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# node
+node_modules/
+dist/
+
+# db dumps
+*.dump
+*.sql
+
+# vector db / indexes / embeddings
+*.faiss
+*.index
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.gguf
+backend/db/index_uu
+backend/db/lawyers
+
+# caches
+.cache/
+runs/
+logs/

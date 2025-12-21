@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light theme base */
+:root {
+  --accent: #e2c693;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  @apply bg-white text-gray-900 antialiased;
+}

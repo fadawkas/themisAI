@@ -1,0 +1,13 @@
+name: huginn
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - requests
+  - beautifulsoup4
+  - lxml
+  - tqdm
+  - pip
+  - pip:
+      - python-dotenv

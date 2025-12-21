@@ -1,0 +1,2 @@
+model,n_rows,avg_words,avg_type_token_ratio,answer_empties_%,exact_duplicate_answers_%
+Gemma-3-4B-it-LoRA,96,488.5625,0.4279478846598324,0.0,0.0
