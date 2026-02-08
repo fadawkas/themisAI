@@ -29,7 +29,7 @@ class AgentState(TypedDict):
 # ============================
 
 VLLM_BASE = os.getenv("VLLM_BASE")
-INTENT_MODEL = os.getenv("INTENT_MODEL", os.getenv("MODEL_NAME", "google/gemma-3-4b-it"))
+INTENT_MODEL = os.getenv("INTENT_MODEL", os.getenv("MODEL_NAME", "Qwen/Qwen2.5-3B-Instruct"))
 
 INTENT_SYSTEM_PROMPT = """
 Kamu adalah classifier untuk pesan pengguna.

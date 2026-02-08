@@ -20,7 +20,7 @@ app.add_middleware(
 def health():
     return {"status": "ok"}
 
-# include routers AFTER middleware, but do NOT put router code in this file
-from app.routers import auth, chat
+from app.routers import auth, chat, documents
 app.include_router(auth.router)
 app.include_router(chat.router)
+app.include_router(documents.router)

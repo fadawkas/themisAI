@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 # Load FAISS index + metadata once at startup
 VLLM_BASE = os.getenv("VLLM_BASE")
 INDEX_DIR = os.getenv("INDEX_DIR", "/app/app/db/index_uu")
-MODEL_NAME = os.getenv("MODEL_NAME", "google/gemma-3-4b-it")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-3B-Instruct")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 TOP_K = int(os.getenv("TOP_K", "2"))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "2048"))
@@ -77,14 +77,16 @@ def ask_vllm(question: str, extra_context: str | None = None):
     base_context, sources = build_context(hits)
 
     if extra_context:
+        extra_context = extra_context[:8000]
         full_context = (
             base_context
             + "\n\n[DOKUMEN PENGGUNA]\n"
             + extra_context
         )
+        max_tokens = 1200
     else:
         full_context = base_context
-
+        max_tokens = MAX_TOKENS
 
     payload = {
         "model": MODEL_NAME,
@@ -94,7 +96,7 @@ def ask_vllm(question: str, extra_context: str | None = None):
                 question=question, context=full_context, sources=sources)}
         ],
         "temperature": 0.1,
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": max_tokens,
     }
     r = requests.post(f"{VLLM_BASE}/v1/chat/completions", json=payload, timeout=300)
     r.raise_for_status()

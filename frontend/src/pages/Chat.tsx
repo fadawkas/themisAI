@@ -103,17 +103,18 @@ async function fetchMessages(sessionId: string): Promise<ApiMessage[]> {
   return api<ApiMessage[]>(`/chat/sessions/${sessionId}/messages?limit=200&offset=0`);
 }
 
-async function sendApiMessage(sessionId: string, content: string): Promise<ApiMessage> {
+async function sendApiMessage(sessionId: string, content: string, documentIds?: string[]): Promise<ApiMessage> {
   return api<ApiMessage>("/chat/messages", {
     method: "POST",
     body: JSON.stringify({
       session_id: sessionId,
       content,
       role: "user",
-      // document_ids / captions: add later when upload flow exists
+      document_ids: documentIds && documentIds.length ? documentIds : null,
     }),
   });
 }
+
 
 async function renameSession(sessionId: string, title: string): Promise<ApiSession> {
   return api<ApiSession>(`/chat/sessions/${sessionId}`, {
@@ -121,6 +122,29 @@ async function renameSession(sessionId: string, title: string): Promise<ApiSessi
     body: JSON.stringify({ title }),
   });
 }
+
+async function uploadDocuments(files: File[]) {
+  const token = getToken();
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+
+  const res = await fetch(`${API_URL}/documents/upload`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // JANGAN set Content-Type di sini!
+    },
+    body: fd,
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(t || `Upload failed HTTP ${res.status}`);
+  }
+
+  return (await res.json()) as { saved: { id: string }[] };
+}
+
 
 
 
@@ -304,7 +328,8 @@ export default function Chat() {
     if (!canSend) return;
 
     const text = input.trim();
-    const atts: Attachment[] = pendingFiles.map((f) => ({ name: f.name, size: f.size }));
+    const filesToUpload = pendingFiles; // simpan dulu, karena nanti state di-clear
+    const atts: Attachment[] = filesToUpload.map((f) => ({ name: f.name, size: f.size }));
 
     // Ensure a session exists
     let sessId = currentSessionId;
@@ -322,7 +347,14 @@ export default function Chat() {
     setIsTyping(true);
 
     try {
-      await sendApiMessage(sessId!, text);
+      let documentIds: string[] = [];
+
+      if (filesToUpload.length > 0) {
+        const up = await uploadDocuments(filesToUpload); // POST /documents/upload (multipart)
+        documentIds = up.saved.map((x) => x.id);
+      }
+
+      await sendApiMessage(sessId!, text, documentIds.length ? documentIds : undefined);
       const data = await fetchMessages(sessId!);
       setMessages(
         data.map((m) => ({

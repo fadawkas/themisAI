@@ -168,6 +168,14 @@ export default function App() {
                 <b> PostgreSQL</b> untuk data terstruktur, serta <b>Vector Store</b> untuk pencarian semantik.
                 Integrasi <b>geospatial</b> membantu merekomendasikan pengacara berdasarkan jarak dan kecocokan kasus.
               </p>
+              <p className="text-gray-700 text-sm leading-relaxed mt-3">
+                Pada implementasinya, ThemisAI menggunakan model <b>Qwen 2.5 3B Instruct</b> yang telah
+                melalui proses <i>fine-tuning</i>. Untuk menjaga jawaban tetap berbasis rujukan, sistem
+                menerapkan <b>Retrieval-Augmented Generation (RAG)</b> yang mengambil konteks dari
+                <b> 35 dokumen hukum pidana</b> terkurasi, sehingga keluaran jawaban lebih relevan dan
+                dapat ditelusuri sumbernya.
+              </p>
+
 
               {/* Quick bullets */}
               <ul className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">

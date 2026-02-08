@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy import (
     String, Integer, Date, DateTime, Enum, ForeignKey, Text,
-    UniqueConstraint, Index
+    UniqueConstraint, Index, Boolean
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -34,6 +34,8 @@ class Person(Base):
 
     address: Mapped["Address"] = relationship(back_populates="person", uselist=False, cascade="all, delete-orphan")
     chat_sessions: Mapped[List["ChatSession"]] = relationship(back_populates="person", cascade="all, delete-orphan")
+    reset_tokens: Mapped[List["PasswordResetToken"]] = relationship(cascade="all, delete-orphan")
+
 
 class Address(Base):
     __tablename__ = "address"
@@ -83,7 +85,7 @@ class DocumentStore(Base):
     doc_type: Mapped[DocTypeEnum] = mapped_column(Enum(DocTypeEnum), default=DocTypeEnum.other, nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String(255))
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
+    extracted_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     attachments: Mapped[List["ChatAttachment"]] = relationship(back_populates="document")
 
 class ChatAttachment(Base):
@@ -100,3 +102,18 @@ class ChatAttachment(Base):
     __table_args__ = (
         UniqueConstraint("message_id", "document_id", name="uq_msg_doc_once"),
     )
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_token"
+
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    person_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("person.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # optional: relationship balik ke Person
+    person: Mapped["Person"] = relationship()

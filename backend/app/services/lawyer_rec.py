@@ -313,4 +313,11 @@ def format_lawyer_recommendation_text(
             f"*Skor Sistem:* {r.get('final_score', 0):.3f}\n"
         )
 
+    lines.append("---\n")
+    lines.append(
+        "Skor dihitung menggunakan metode *weighted scoring* dengan menggabungkan "
+        "jarak lokasi dan kecocokan spesialisasi. Semakin tinggi skor, semakin relevan "
+        "pengacara untuk direkomendasikan.\n"
+    )    
+
     return "\n".join(lines)

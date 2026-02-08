@@ -4,16 +4,28 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
 
 from app.db.database import get_db
 from app.db import models
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.security import maybe_upgrade_hash
+from app.services.password_reset import make_reset_token, hash_token, expires_at
+from app.services.mailer import send_reset_email
 
 from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/signin")
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=10)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 def get_current_user(
@@ -132,3 +144,61 @@ def me(current: models.Person = Depends(get_current_user)):
             "country": current.address.country if current.address else None,
         },
     }
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordIn, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    user = db.query(models.Person).filter(models.Person.email == email).first()
+
+    # anti email-enumeration: always return ok
+    if not user or not user.is_active:
+        return {"ok": True}
+
+    raw = make_reset_token()
+
+    rec = models.PasswordResetToken(
+        person_id=user.id,
+        token_hash=hash_token(raw),
+        expires_at=expires_at(15),
+        used=False,
+    )
+    db.add(rec)
+    db.commit()
+
+    try:
+        send_reset_email(user.email, raw)
+    except Exception:
+        # keep response generic
+        return {"ok": True}
+
+    return {"ok": True}
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordIn, db: Session = Depends(get_db)):
+    token_h = hash_token(payload.token.strip())
+
+    rec = (
+        db.query(models.PasswordResetToken)
+        .filter(models.PasswordResetToken.token_hash == token_h)
+        .first()
+    )
+    if not rec:
+        raise HTTPException(400, "Token tidak valid")
+    if rec.used:
+        raise HTTPException(400, "Token sudah digunakan")
+    if rec.expires_at < datetime.utcnow():
+        raise HTTPException(400, "Token sudah kedaluwarsa")
+
+    user = db.get(models.Person, rec.person_id)
+    if not user or not user.is_active:
+        raise HTTPException(400, "User tidak ditemukan/aktif")
+
+    user.password_hash = hash_password(payload.new_password)
+    rec.used = True
+
+    db.add(user)
+    db.add(rec)
+    db.commit()
+
+    return {"ok": True}

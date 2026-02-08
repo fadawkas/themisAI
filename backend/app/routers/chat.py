@@ -147,6 +147,24 @@ def delete_session(
 # Messages
 # =========================
 
+def _build_extra_context_from_docs(docs: List[models.DocumentStore], max_chars: int = 8000) -> Optional[str]:
+    parts: List[str] = []
+    for doc in docs:
+        txt = (doc.extracted_text or "").strip()
+        if not txt:
+            continue
+        title = doc.title or doc.path
+        parts.append(f"[DOKUMEN: {title}]\n{txt}")
+
+    if not parts:
+        return None
+
+    full = "\n\n---\n\n".join(parts).strip()
+    if len(full) > max_chars:
+        full = full[:max_chars] + "\n\n...[dipotong, dokumen terlalu panjang]"
+    return full
+
+
 @router.get("/sessions/{session_id}/messages", response_model=List[ChatMessageOut])
 def list_messages(
     session_id: UUID,
@@ -183,20 +201,26 @@ def create_message(
         session_id=payload.session_id,
         role=MessageRoleEnum.user,
         content=payload.content,
+        latency_ms=payload.latency_ms,
+        reasoning_context=payload.reasoning_context,
     )
     db.add(user_msg)
     db.commit()
     db.refresh(user_msg)
 
-    # 2) Ambil teks dari dokumen terlampir (kalau ada)
-    extra_context_parts: List[str] = []
+    # 2) Kalau ada dokumen, ambil extracted_text dari DB (tanpa extract ulang)
+    extra_context: Optional[str] = None
 
     if payload.document_ids:
         docs = (
             db.query(models.DocumentStore)
-              .filter(models.DocumentStore.id.in_(payload.document_ids))
-              .all()
+            .filter(models.DocumentStore.id.in_(payload.document_ids))
+            .all()
         )
+
+        # (opsional tapi disarankan) validasi: kalau user kirim id tapi tidak ada dokumennya
+        if not docs:
+            raise HTTPException(400, "document_ids provided but no documents found")
 
         # Simpan relasi ke ChatAttachment
         for doc in docs:
@@ -209,23 +233,13 @@ def create_message(
 
         db.commit()
 
-        # Ekstrak teksnya
-        for doc in docs:
-            try:
-                txt = extract_text_from_document(doc.path, max_chars=4000)
-                if txt:
-                    extra_context_parts.append(
-                        f"[DOKUMEN: {doc.title or doc.path}]\n{txt}"
-                    )
-            except Exception as e:
-                print("Error extract doc:", doc.path, e)
+        # Build extra_context dari extracted_text yang sudah disimpan di DocumentStore
+        extra_context = _build_extra_context_from_docs(docs, max_chars=8000)
 
-    extra_context = "\n\n".join(extra_context_parts) if extra_context_parts else None
-
-    # 3) Panggil PIDANA GRAPH AGENT (intent routing + RAG + lawyer rec + dokumen user)
+    # 3) Panggil PIDANA GRAPH AGENT
     try:
         answer = run_pidana_graph(payload.content, current, extra_context=extra_context)
-        sources = None  # optional, karena pidana_graph_agent tidak mengembalikan sources
+        sources = None
     except Exception as e:
         raise HTTPException(500, f"Pidana agent failed: {e}")
 
