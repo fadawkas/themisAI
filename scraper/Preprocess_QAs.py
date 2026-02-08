@@ -3,12 +3,12 @@ import google.generativeai as genai
 import time
 
 # === KONFIGURASI ===
-INPUT_FILE = 'datasets/QAs_Hukumonline_Clean.json'   # File JSON input (original)
+INPUT_FILE = 'datasets/QAs_Hukumonline_Clean.json'   # File JSON input 
 OUTPUT_FILE = 'datasets/QAs_Hukumonline_Clean_GEN.json'  # Output file
-MAX_ITEMS = 250  # Ubah ini ke jumlah record yang ingin kamu proses (atau None untuk semua)
+MAX_ITEMS = 250
 
 # === SETUP GEMINI ===
-genai.configure(api_key="AIzaSyBoCGWGKvVxCCrWhll3A4--_yL_EjGab6U")  # <--- ganti dengan API key kamu
+genai.configure(api_key="")
 
 model = genai.GenerativeModel('gemini-1.5-pro')
 
@@ -57,3 +57,4 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     json.dump(cleaned_dataset, f, ensure_ascii=False, indent=2)
 
 print(f"\nCleaning selesai! Total {len(cleaned_dataset)} records disimpan ke {OUTPUT_FILE}")
+
