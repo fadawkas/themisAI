@@ -40,14 +40,23 @@ Sistem ThemisAI terdiri dari beberapa komponen utama, yaitu:
 
 ## Struktur Direktori
 themisAI/
+
 ├── backend/ # Backend API dan pipeline RAG
+
 ├── frontend/ # Antarmuka web pengguna
+
 ├── rag_dev/ # Pengembangan dan eksperimen RAG
+
 ├── finetune_dev/ # Eksperimen fine-tuning model
+
 ├── scraper/ # Pengumpulan dan pemrosesan data hukum
+
 ├── benchmark/ # Evaluasi model dan metrik RAGAS
+
 ├── docker-compose.dev.yml
+
 ├── .gitignore
+
 └── README.md
 
 ---
